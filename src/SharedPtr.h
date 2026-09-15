@@ -3,7 +3,7 @@
 
 class ControlBlockBase {
 public:
-    ControlBlockBase(long count = 1) : refCnt(count) {} // TODO: implement the default constructor.
+    ControlBlockBase() : refCnt(1) {}
 
     // dtor is virtual, so that we can call derived class's dtor from a ptr to this base class.
     virtual ~ControlBlockBase(); // TODO: implement the destructor.
