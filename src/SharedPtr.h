@@ -1,15 +1,16 @@
 #ifndef SHARED_PTR_HEADER
 #define SHARED_PTR_HEADER
 
+#include <iostream>
+#include <stdio.h>
+#include <utility>
+#include <cassert>
 class ControlBlockBase {
 public:
     ControlBlockBase() : refCnt(1) {}
 
     // dtor is virtual, so that we can call derived class's dtor from a ptr to this base class.
     virtual ~ControlBlockBase() {
-        if (refCnt < 1) {
-            delete this;
-        }
     }
 
     // pure virtual function; must be overriden by derived classes
@@ -47,6 +48,7 @@ class ControlBlock: public ControlBlockBase {
 
         ~ControlBlock() override {
             delete storedPtr;
+            storedPtr = nullptr;
         }
 
         void* managedAddress() override {
@@ -72,7 +74,12 @@ class SharedPtr {
         }
 
         ~SharedPtr() {
-            deletePtr();
+            if (cBlock) {
+                if (cBlock->decrement() < 1) {
+                    delete cBlock;
+                    storedPtr = nullptr;
+                }
+            }
         }
 
         // copy
@@ -86,7 +93,8 @@ class SharedPtr {
         SharedPtr(SharedPtr<T>&& other) {
             cBlock = other.cBlock;
             storedPtr = other.storedPtr;
-            other.reset();
+            other.cBlock = nullptr;
+                other.storedPtr = nullptr;
         }
         // copy operator
         SharedPtr<T>& operator=(const SharedPtr<T>& other) {
@@ -104,7 +112,8 @@ class SharedPtr {
                 reset();
                 cBlock = other.cBlock;
                 storedPtr = other.storedPtr;
-                other.reset();
+                other.cBlock = nullptr;
+                other.storedPtr = nullptr;
             }
             return *this;
         }
@@ -117,7 +126,12 @@ class SharedPtr {
         T* get() const { return storedPtr;}
 
         void reset() {
-            deletePtr();
+            if (cBlock) {
+                if (cBlock->decrement() < 1) {
+                    delete cBlock;
+                    storedPtr = nullptr;
+                }
+            }
         }
 
         void reset(T* other) {
@@ -129,7 +143,7 @@ class SharedPtr {
                 return;
             }
             T* tempT = storedPtr;
-            ControlBlock tempBlock = cBlock;
+            ControlBlock<T> tempBlock = cBlock;
             storedPtr = other.storedPtr;
             cBlock = other.cBlock;
             other.storedPtr = tempT;
@@ -139,21 +153,6 @@ class SharedPtr {
         long useCount() {
             return cBlock->refCount();
         }
-
-        bool deletePtr() {
-            if (cBlock) {
-                cBlock->decrement();
-                if (cBlock->refCount() < 1) {
-                    delete cBlock;
-                    cBlock = nullptr;
-                    storedPtr = nullptr;
-                    return true;
-                }
-            }
-            return false;
-        }
-
-
 
     private:
         T* storedPtr;
