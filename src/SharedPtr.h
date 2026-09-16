@@ -1,10 +1,6 @@
 #ifndef SHARED_PTR_HEADER
 #define SHARED_PTR_HEADER
 
-#include <iostream>
-#include <stdio.h>
-#include <utility>
-#include <cassert>
 class ControlBlockBase {
 public:
     ControlBlockBase() : refCnt(1) {}
@@ -62,15 +58,17 @@ class ControlBlock: public ControlBlockBase {
 template <class T>
 class SharedPtr {
     public:
+        template <class U> friend class SharedPtr;
         SharedPtr() : storedPtr(nullptr), cBlock(nullptr) {}
 
-        SharedPtr(T* p = nullptr) : storedPtr(p) {
+        SharedPtr(T* p) : storedPtr(p) {
             cBlock = new ControlBlock<T>(p);
         }
 
-        template <typename U> SharedPtr(const SharedPtr<U>& other, T* storedPtr) {
-            this->storedPtr = storedPtr;
-
+        template <typename U> SharedPtr(const SharedPtr<U>& other, T* storedPtr) : storedPtr(storedPtr), cBlock(other.cBlock) {
+            if (cBlock) {
+                cBlock->increment();
+            }
         }
 
         ~SharedPtr() {
@@ -94,7 +92,7 @@ class SharedPtr {
             cBlock = other.cBlock;
             storedPtr = other.storedPtr;
             other.cBlock = nullptr;
-                other.storedPtr = nullptr;
+            other.storedPtr = nullptr;
         }
         // copy operator
         SharedPtr<T>& operator=(const SharedPtr<T>& other) {
@@ -126,31 +124,33 @@ class SharedPtr {
         T* get() const { return storedPtr;}
 
         void reset() {
-            if (cBlock) {
-                if (cBlock->decrement() < 1) {
-                    delete cBlock;
-                    storedPtr = nullptr;
-                }
-            }
+            // if (cBlock) {
+            //     if (cBlock->decrement() < 1) {
+            //         delete cBlock;
+            //     }
+            //     cBlock = nullptr;
+            //     storedPtr = nullptr;
+            // }
+            SharedPtr<T>().swap(*this);
         }
 
         void reset(T* other) {
-            swap(new SharedPtr(other));
+            SharedPtr<T>(other).swap(*this);
         }
 
         void swap(SharedPtr<T>& other) {
-            if (this == other) {
+            if (storedPtr == other.storedPtr) {
                 return;
             }
             T* tempT = storedPtr;
-            ControlBlock<T> tempBlock = cBlock;
+            ControlBlockBase* tempBlock = cBlock;
             storedPtr = other.storedPtr;
             cBlock = other.cBlock;
             other.storedPtr = tempT;
             other.cBlock = tempBlock;
         }
 
-        long useCount() {
+        long useCount() const {
             return cBlock->refCount();
         }
 
@@ -158,5 +158,11 @@ class SharedPtr {
         T* storedPtr;
         ControlBlockBase* cBlock;
 };
+
+template <typename T, typename... Args> SharedPtr<T> makeSharedBasic(Args&&... args) {
+    T* p = new T(std::forward<Args>(args)...);
+    SharedPtr<T> ptr(p);
+    return ptr;
+}
 
 #endif
