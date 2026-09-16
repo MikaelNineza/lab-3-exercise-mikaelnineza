@@ -160,13 +160,39 @@ class SharedPtr {
         }
 
     private:
+        template <class U, class... Args> friend SharedPtr<U> makeShared(Args&&... args);
         T* storedPtr;
         ControlBlockBase* cBlock;
+
+        // Bonus
+        SharedPtr(T* p, ControlBlockBase* conBlock) : storedPtr(p), cBlock(conBlock) {}
 };
 
 template <class T, class... Args> SharedPtr<T> makeSharedBasic(Args&&... args) {
     SharedPtr<T> ptr(new T(std::forward<Args>(args)...));
     return ptr;
+}
+
+
+template <class T>
+class ControlBlockEmbedded : public ControlBlockBase {
+    public:
+    template <class... Args>
+    ControlBlockEmbedded(Args&&... args) : obj(std::forward<Args>(args)...) {}
+    
+    ~ControlBlockEmbedded() override {}
+    
+    void* managedAddress() override {
+        return &obj;
+    }
+    
+    private:
+    T obj;
+};
+
+template <class T, class... Args> SharedPtr<T> makeShared(Args&&... args) {
+    ControlBlockBase* cBlock = new ControlBlockEmbedded<T>(std::forward<Args>(args)...);
+    return  SharedPtr<T>((T*)cBlock->managedAddress(), cBlock);
 }
 
 #endif
