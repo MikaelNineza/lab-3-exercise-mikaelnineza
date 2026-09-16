@@ -159,9 +159,8 @@ class SharedPtr {
         ControlBlockBase* cBlock;
 };
 
-template <typename T, typename... Args> SharedPtr<T> makeSharedBasic(Args&&... args) {
-    T* p = new T(std::forward<Args>(args)...);
-    SharedPtr<T> ptr(p);
+template <class T, class... Args> SharedPtr<T> makeSharedBasic(Args&&... args) {
+    SharedPtr<T> ptr(new T(std::forward<Args>(args)...));
     return ptr;
 }
 
