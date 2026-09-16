@@ -1,12 +1,15 @@
 #ifndef SHARED_PTR_HEADER
 #define SHARED_PTR_HEADER
 
+#include <cassert>
+#include <utility>
 class ControlBlockBase {
 public:
     ControlBlockBase() : refCnt(1) {}
 
     // dtor is virtual, so that we can call derived class's dtor from a ptr to this base class.
     virtual ~ControlBlockBase() {
+        assert(refCnt == 0);
     }
 
     // pure virtual function; must be overriden by derived classes
@@ -18,12 +21,14 @@ public:
 
     long increment()
     {
+        assert(refCnt > 0);
         refCnt += 1;
         return refCnt;
     }
 
     long decrement()
     {
+        assert(refCnt > 0);
         refCnt -= 1;
         return refCnt;
     }

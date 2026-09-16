@@ -1,6 +1,4 @@
-#include <cassert>
 #include <cstdlib>
-#include <utility>
 #include "SharedPtr.h"
 
 struct Foo {
